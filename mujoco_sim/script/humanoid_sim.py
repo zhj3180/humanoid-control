@@ -8,6 +8,7 @@ import rospkg
 from std_msgs.msg import Float32MultiArray,Bool
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
+import time
 
 from geometry_msgs.msg import Vector3
 
@@ -16,6 +17,7 @@ class HumanoidSim(MuJoCoBase):
   def __init__(self, xml_path):
     super().__init__(xml_path)
     self.simend = 1000.0
+    self.sim_rate = 1000.0
     # print('Total number of DoFs in the model:', self.model.nv)
     # print('Generalized positions:', self.data.qpos)  
     # print('Generalized velocities:', self.data.qvel)
@@ -105,6 +107,7 @@ class HumanoidSim(MuJoCoBase):
   def simulate(self):
     publish_time = self.data.time
     torque_publish_time = self.data.time
+    sim_epoch_start = time.time()
     while not glfw.window_should_close(self.window):
       simstart = self.data.time
 
@@ -129,6 +132,7 @@ class HumanoidSim(MuJoCoBase):
         #rospy.loginfo("PYTHON:::disturbForce: x=%f, y=%f, z=%f", self.disturbForce.x, self.disturbForce.y,self.disturbForce.z)
         # Step simulation environment
         mj.mj_step(self.model, self.data)
+
         if (self.data.time - publish_time >= 1.0 / 500.0):
           # * Publish joint positions and velocities
           jointsPosVel = Float32MultiArray()

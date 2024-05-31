@@ -26,21 +26,21 @@ class KeyboardController:
                 if key.char == 'w':
                     self.twist_msg.linear.x = 0.4
                 elif key.char == 's':
-                    self.twist_msg.linear.x = -0.26
+                    self.twist_msg.linear.x = -0.4
                 else:
                     self.twist_msg.linear.x = 0.0
 
                 if key.char == 'a':
-                    self.twist_msg.linear.y = 0.25
+                    self.twist_msg.linear.y = 0.3
                 elif key.char == 'd':
-                    self.twist_msg.linear.y = -0.25
+                    self.twist_msg.linear.y = -0.3
                 else:
                     self.twist_msg.linear.y = 0.0
 
                 if key.char == 'q':
-                    self.twist_msg.angular.z = 0.32
+                    self.twist_msg.angular.z = 0.4
                 elif key.char == 'e':
-                    self.twist_msg.angular.z = -0.32
+                    self.twist_msg.angular.z = -0.4
                 else:
                     self.twist_msg.angular.z = 0.0
                     
