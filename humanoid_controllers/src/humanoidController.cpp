@@ -68,6 +68,8 @@ bool humanoidController::init(HybridJointInterface* robot_hw, ros::NodeHandle& c
     targetKpPub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/targetKp", 10);
     targetKdPub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/targetKd", 10);
 
+    //disturbForce_ = controllerNh_.subscribe<geometry_msgs::Vector3>("disturb_force", 10, &humanoidController::disturbForceCallback, this);
+
   // State estimation
   setupStateEstimate(taskFile, verbose);
 
@@ -93,13 +95,23 @@ void humanoidController::jointStateCallback(const std_msgs::Float32MultiArray::C
   }
 }
 
+void humanoidController::disturbForceCallback(const geometry_msgs::Vector3::ConstPtr& msg) {
+  disturbF = {msg->x, msg->y, msg->z};
+  disturbAcc = disturbF / HumanoidInterface_->getCentroidalModelInfo().robotMass;
+  //ROS_INFO("Received force: [%f, %f, %f]", disturbF[0], disturbF[1], disturbF[2]);
+  //ROS_INFO("Received force: [%f]", HumanoidInterface_->getCentroidalModelInfo().robotMass);
+
+}
+
 void humanoidController::ImuCallback(const sensor_msgs::Imu::ConstPtr &msg) {
     quat_.coeffs().w() = msg->orientation.w;
     quat_.coeffs().x() = msg->orientation.x;
     quat_.coeffs().y() = msg->orientation.y;
     quat_.coeffs().z() = msg->orientation.z;
     angularVel_ << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
+
     linearAccel_ << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
+  
     orientationCovariance_ << msg->orientation_covariance[0], msg->orientation_covariance[1], msg->orientation_covariance[2],
             msg->orientation_covariance[3], msg->orientation_covariance[4], msg->orientation_covariance[5],
             msg->orientation_covariance[6], msg->orientation_covariance[7], msg->orientation_covariance[8];
@@ -146,11 +158,15 @@ void humanoidController::update(const ros::Time& time, const ros::Duration& peri
   mpcMrtInterface_->setCurrentObservation(currentObservation_);
 
   // Load the latest MPC policy
-  mpcMrtInterface_->updatePolicy();
+  mpcMrtInterface_->updatePolicy();   
 
   // Evaluate the current policy
   vector_t optimizedState, optimizedInput;
   mpcMrtInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState, optimizedInput, plannedMode_);
+
+  // std::cout<<time<<std::endl;
+  // std::cout<<optimizedInput.size()<<std::endl;
+  // std::cout<<std::endl;
 
   // Whole body control
   currentObservation_.input = optimizedInput;
@@ -160,6 +176,7 @@ void humanoidController::update(const ros::Time& time, const ros::Duration& peri
     optimizedInput.setZero();
     optimizedState.segment(6, 6) = currentObservation_.state.segment<6>(6);
     optimizedState.segment(6 + 6, jointNum_) = defalutJointPos_;
+
     // plannedMode_ = 3;
     wbc_->setStanceMode(true);
   }
@@ -175,7 +192,6 @@ void humanoidController::update(const ros::Time& time, const ros::Duration& peri
   const vector_t& wbc_planned_joint_acc = x.segment(6, jointNum_);
   const vector_t& wbc_planned_body_acc = x.head(6);
   const vector_t& wbc_planned_contact_force = x.segment(6 + jointNum_, wbc_->getContactForceSize());
-
 
   vector_t posDes = centroidal_model::getJointAngles(optimizedState, HumanoidInterface_->getCentroidalModelInfo());
   vector_t velDes = centroidal_model::getJointVelocities(optimizedInput, HumanoidInterface_->getCentroidalModelInfo());

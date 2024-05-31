@@ -24,6 +24,8 @@
 #include "std_msgs/Bool.h"
 #include "sensor_msgs/Imu.h"
 
+#include <geometry_msgs/Vector3.h>
+
 namespace humanoid_controller{
 using namespace ocs2;
 using namespace humanoid;
@@ -48,6 +50,11 @@ class humanoidController : public controller_interface::Controller<HybridJointIn
 
   void jointStateCallback(const std_msgs::Float32MultiArray::ConstPtr& msg);
   void ImuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+
+  void disturbForceCallback(const geometry_msgs::Vector3::ConstPtr& msg);
+  ros::Subscriber disturbForce_;
+  vector3_t disturbF={0,0,0};
+  vector3_t disturbAcc={0,0,0};
 
   // Interface
   std::shared_ptr<HumanoidInterface> HumanoidInterface_;
@@ -79,6 +86,7 @@ class humanoidController : public controller_interface::Controller<HybridJointIn
     ros::Publisher targetKdPub_;
     ros::Subscriber jointPosVelSub_;
     ros::Subscriber imuSub_;
+
 
     // Node Handle
     ros::NodeHandle controllerNh_;

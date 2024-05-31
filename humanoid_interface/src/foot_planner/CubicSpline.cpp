@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
 
 #include "humanoid_interface/foot_planner/CubicSpline.h"
+#include "iostream"
 
 namespace ocs2 {
 namespace humanoid {

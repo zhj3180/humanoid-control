@@ -38,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "humanoid_dummy/visualization/HumanoidVisualizer.h"
 
+#define threedof 1
+
 using namespace ocs2;
 using namespace humanoid;
 
@@ -61,10 +63,25 @@ int main(int argc, char** argv) {
   mrt.initRollout(&interface.getRollout());
   mrt.launchNodes(nodeHandle);
 
+  //修改
   // Visualization
   CentroidalModelPinocchioMapping pinocchioMapping(interface.getCentroidalModelInfo());
+#if threedof
   PinocchioEndEffectorKinematics endEffectorKinematics(interface.getPinocchioInterface(), pinocchioMapping,
                                                        interface.modelSettings().contactNames3DoF);
+#else
+    PinocchioEndEffectorKinematics endEffectorKinematics(interface.getPinocchioInterface(), pinocchioMapping,
+                                                       interface.modelSettings().contactNames6DoF);
+#endif
+
+  std::cout<<std::endl;
+  auto tempid = endEffectorKinematics.getIds();
+  for(auto ids:tempid)
+  {
+    std::cout<<"getid::"<<ids<<std::endl;
+    std::cout<<std::endl;
+  }
+  //这里有修改visuallizer内部
   auto humanoidVisualizer = std::make_shared<HumanoidVisualizer>(
       interface.getPinocchioInterface(), interface.getCentroidalModelInfo(), endEffectorKinematics, nodeHandle);
 
@@ -76,6 +93,7 @@ int main(int argc, char** argv) {
   // Initial state
   SystemObservation initObservation;
   initObservation.state = interface.getInitialState();
+  
   initObservation.input = vector_t::Zero(interface.getCentroidalModelInfo().inputDim);
   initObservation.mode = ModeNumber::STANCE;
 

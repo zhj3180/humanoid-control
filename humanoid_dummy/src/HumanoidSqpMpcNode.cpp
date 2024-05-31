@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   nodeHandle.getParam("/referenceFile", referenceFile);
 
   // Robot interface
-  HumanoidInterface interface(taskFile, urdfFile, referenceFile);
+  HumanoidInterface interface(taskFile, urdfFile, referenceFile); 
 
   // Gait receiver
   auto gaitReceiverPtr =
@@ -89,6 +89,13 @@ int main(int argc, char** argv) {
   // Launch MPC ROS node
   MPC_ROS_Interface mpcNode(mpc, robotName);
   mpcNode.launchNodes(nodeHandle);
+
+
+  //         std::cout<<std::endl;
+  // std::cout<<"dummy::::::z2"<<std::endl;
+  // std::cout<<std::endl;
+  //     std::this_thread::sleep_for(std::chrono::seconds(5));  
+  // std::cout << "等待结束1分钟已经过去了。\n"; 
 
   // Successful exit
   return 0;

@@ -51,6 +51,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <urdf/model.h>
 #include <kdl_parser/kdl_parser.hpp>
 
+#define threedof 1
+
 namespace ocs2 {
 namespace humanoid {
 
@@ -66,13 +68,17 @@ HumanoidVisualizer::HumanoidVisualizer(PinocchioInterface pinocchioInterface, Ce
       lastTime_(std::numeric_limits<scalar_t>::lowest()),
       minPublishTimeDifference_(1.0 / maxUpdateFrequency) {
   endEffectorKinematicsPtr_->setPinocchioInterface(pinocchioInterface_);
+
+  //有问题
   launchVisualizerNode(nodeHandle);
+
 };
 
 /******************************************************************************************************/
 /******************************************************************************************************/
 /******************************************************************************************************/
-void HumanoidVisualizer::launchVisualizerNode(ros::NodeHandle& nodeHandle) {
+void HumanoidVisualizer::launchVisualizerNode(ros::NodeHandle& nodeHandle) { 
+#if threedof
   costDesiredBasePositionPublisher_ = nodeHandle.advertise<visualization_msgs::Marker>("/humanoid/desiredBaseTrajectory", 1);
   costDesiredFeetPositionPublishers_.resize(centroidalModelInfo_.numThreeDofContacts);
   costDesiredFeetPositionPublishers_[0] = nodeHandle.advertise<visualization_msgs::Marker>("/humanoid/desiredFeetTrajectory/LTOE", 1);
@@ -93,6 +99,31 @@ void HumanoidVisualizer::launchVisualizerNode(ros::NodeHandle& nodeHandle) {
     robotStatePublisherPtr_.reset(new robot_state_publisher::RobotStatePublisher(kdlTree));
     robotStatePublisherPtr_->publishFixedTransforms(true);
   }
+#else
+  costDesiredBasePositionPublisher_ = nodeHandle.advertise<visualization_msgs::Marker>("/humanoid/desiredBaseTrajectory", 1);
+  //修改 sixdof
+  costDesiredFeetPositionPublishers_.resize(centroidalModelInfo_.numSixDofContacts);
+
+  //costDesiredFeetPositionPublishers_.resize(centroidalModelInfo_.numThreeDofContacts);
+
+  //修改 sixdof只有两个足轨迹
+  costDesiredFeetPositionPublishers_[0] = nodeHandle.advertise<visualization_msgs::Marker>("/humanoid/desiredFeetTrajectory/LTOE", 1);
+  costDesiredFeetPositionPublishers_[1] = nodeHandle.advertise<visualization_msgs::Marker>("/humanoid/desiredFeetTrajectory/RTOE", 1);
+  stateOptimizedPublisher_ = nodeHandle.advertise<visualization_msgs::MarkerArray>("/humanoid/optimizedStateTrajectory", 1);
+  currentStatePublisher_ = nodeHandle.advertise<visualization_msgs::MarkerArray>("/humanoid/currentState", 1);
+
+  // Load URDF model
+  urdf::Model urdfModel;
+  if (!urdfModel.initParam("humanoid_description")) {
+    std::cerr << "[HumanoidVisualizer] Could not read URDF from: \"humanoid_description\"" << std::endl;
+  } else {
+    KDL::Tree kdlTree;
+    kdl_parser::treeFromUrdfModel(urdfModel, kdlTree);
+
+    robotStatePublisherPtr_.reset(new robot_state_publisher::RobotStatePublisher(kdlTree));
+    robotStatePublisherPtr_->publishFixedTransforms(true);
+  }
+#endif
 }
 
 /******************************************************************************************************/
@@ -118,6 +149,7 @@ void HumanoidVisualizer::update(const SystemObservation& observation, const Prim
 /******************************************************************************************************/
 /******************************************************************************************************/
 void HumanoidVisualizer::publishObservation(ros::Time timeStamp, const SystemObservation& observation) {
+#if threedof
   // Extract components from state
   const auto basePose = centroidal_model::getBasePose(observation.state, centroidalModelInfo_);
   const auto qJoints = centroidal_model::getJointAngles(observation.state, centroidalModelInfo_);
@@ -133,6 +165,23 @@ void HumanoidVisualizer::publishObservation(ros::Time timeStamp, const SystemObs
   publishJointTransforms(timeStamp, qJoints);
   publishBaseTransform(timeStamp, basePose);
   publishCartesianMarkers(timeStamp, modeNumber2StanceLeg(observation.mode), feetPositions, feetForces);
+
+#else
+  const auto basePose = centroidal_model::getBasePose(observation.state, centroidalModelInfo_);
+  const auto qJoints = centroidal_model::getJointAngles(observation.state, centroidalModelInfo_);
+
+  // Compute cartesian state and inputs
+  const auto feetPositions = endEffectorKinematicsPtr_->getPosition(observation.state);
+  std::vector<vector3_t> feetForces(centroidalModelInfo_.numSixDofContacts);
+  for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+    feetForces[i] = centroidal_model::getContactForces(observation.input, i, centroidalModelInfo_);
+  }
+
+  // Publish
+  publishJointTransforms(timeStamp, qJoints);
+  publishBaseTransform(timeStamp, basePose);
+  publishCartesianMarkers(timeStamp, modeNumber2StanceLeg(observation.mode), feetPositions, feetForces);
+#endif
 }
 
 /******************************************************************************************************/
@@ -183,6 +232,7 @@ void HumanoidVisualizer::publishTrajectory(const std::vector<SystemObservation>&
 void HumanoidVisualizer::publishCartesianMarkers(ros::Time timeStamp, const contact_flag_t& contactFlags,
                                                     const std::vector<vector3_t>& feetPositions,
                                                     const std::vector<vector3_t>& feetForces) const {
+#if threedof
   // Reserve message
   const size_t numberOfCartesianMarkers = 10;
   visualization_msgs::MarkerArray markerArray;
@@ -209,6 +259,35 @@ void HumanoidVisualizer::publishCartesianMarkers(ros::Time timeStamp, const cont
 
   // Publish cartesian markers (minus the CoM Pose)
   currentStatePublisher_.publish(markerArray);
+
+#else
+    const size_t numberOfCartesianMarkers = 10;
+  visualization_msgs::MarkerArray markerArray;
+  markerArray.markers.reserve(numberOfCartesianMarkers);
+
+  // Feet positions and Forces
+  for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; ++i) {
+    markerArray.markers.emplace_back(
+        getFootMarker(feetPositions[i], contactFlags[i], feetColorMap_[i], footMarkerDiameter_, footAlphaWhenLifted_));
+    markerArray.markers.emplace_back(getForceMarker(feetForces[i], feetPositions[i], contactFlags[i], Color::green, forceScale_));
+  }
+
+  // Center of pressure
+  markerArray.markers.emplace_back(getCenterOfPressureMarker(feetForces.begin(), feetForces.end(), feetPositions.begin(),
+                                                             contactFlags.begin(), Color::green, copMarkerDiameter_));
+
+  // Support polygon
+  markerArray.markers.emplace_back(
+      getSupportPolygonMarker(feetPositions.begin(), feetPositions.end(), contactFlags.begin(), Color::black, supportPolygonLineWidth_));
+
+  // Give markers an id and a frame
+  assignHeader(markerArray.markers.begin(), markerArray.markers.end(), getHeaderMsg(frameId_, timeStamp));
+  assignIncreasingId(markerArray.markers.begin(), markerArray.markers.end());
+
+  // Publish cartesian markers (minus the CoM Pose)
+  currentStatePublisher_.publish(markerArray);
+#endif
+
 }
 
 /******************************************************************************************************/
@@ -221,7 +300,7 @@ void HumanoidVisualizer::publishDesiredTrajectory(ros::Time timeStamp, const Tar
   // Reserve com messages
   std::vector<geometry_msgs::Point> desiredBasePositionMsg;
   desiredBasePositionMsg.reserve(stateTrajectory.size());
-
+#if threedof
   // Reserve feet messages
   feet_array_t<std::vector<geometry_msgs::Point>> desiredFeetPositionMsgs;
   for (size_t i = 0; i < centroidalModelInfo_.numThreeDofContacts; i++) {
@@ -272,6 +351,57 @@ void HumanoidVisualizer::publishDesiredTrajectory(ros::Time timeStamp, const Tar
     footLineMsg.id = 0;
     costDesiredFeetPositionPublishers_[i].publish(footLineMsg);
   }
+#else
+    feet_array_t<std::vector<geometry_msgs::Point>> desiredFeetPositionMsgs;
+  for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+    desiredFeetPositionMsgs[i].reserve(stateTrajectory.size());
+  }
+
+  for (size_t j = 0; j < stateTrajectory.size(); j++) {
+    const auto state = stateTrajectory.at(j);
+    vector_t input(centroidalModelInfo_.inputDim);
+    if (j < inputTrajectory.size()) {
+      input = inputTrajectory.at(j);
+    } else {
+      input.setZero();
+    }
+
+    // Construct base pose msg
+    const auto basePose = centroidal_model::getBasePose(state, centroidalModelInfo_);
+    geometry_msgs::Pose pose;
+    pose.position = getPointMsg(basePose.head<3>());
+
+    // Fill message containers
+    desiredBasePositionMsg.push_back(pose.position);
+
+    // Fill feet msgs
+    const auto& model = pinocchioInterface_.getModel();
+    auto& data = pinocchioInterface_.getData();
+    pinocchio::forwardKinematics(model, data, centroidal_model::getGeneralizedCoordinates(state, centroidalModelInfo_));
+    pinocchio::updateFramePlacements(model, data);
+
+    const auto feetPositions = endEffectorKinematicsPtr_->getPosition(state);
+    for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+      geometry_msgs::Pose footPose;
+      footPose.position = getPointMsg(feetPositions[i]);
+      desiredFeetPositionMsgs[i].push_back(footPose.position);
+    }
+  }
+
+  // Headers
+  auto comLineMsg = getLineMsg(std::move(desiredBasePositionMsg), Color::green, trajectoryLineWidth_);
+  comLineMsg.header = getHeaderMsg(frameId_, timeStamp);
+  comLineMsg.id = 0;
+
+  // Publish
+  costDesiredBasePositionPublisher_.publish(comLineMsg);
+  for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+    auto footLineMsg = getLineMsg(std::move(desiredFeetPositionMsgs[i]), feetColorMap_[i], trajectoryLineWidth_);
+    footLineMsg.header = getHeaderMsg(frameId_, timeStamp);
+    footLineMsg.id = 0;
+    costDesiredFeetPositionPublishers_[i].publish(footLineMsg);
+  }
+#endif
 }
 
 /******************************************************************************************************/
@@ -279,6 +409,7 @@ void HumanoidVisualizer::publishDesiredTrajectory(ros::Time timeStamp, const Tar
 /******************************************************************************************************/
 void HumanoidVisualizer::publishOptimizedStateTrajectory(ros::Time timeStamp, const scalar_array_t& mpcTimeTrajectory,
                                                             const vector_array_t& mpcStateTrajectory, const ModeSchedule& modeSchedule) {
+#if threedof
   if (mpcTimeTrajectory.empty() || mpcStateTrajectory.empty()) {
     return;  // Nothing to publish
   }
@@ -357,6 +488,86 @@ void HumanoidVisualizer::publishOptimizedStateTrajectory(ros::Time timeStamp, co
     }
   }
   markerArray.markers.push_back(std::move(sphereList));
+
+#else
+  if (mpcTimeTrajectory.empty() || mpcStateTrajectory.empty()) {
+    return;  // Nothing to publish
+  }
+
+  // Reserve Feet msg
+  feet_array_t<std::vector<geometry_msgs::Point>> feetMsgs;
+  std::for_each(feetMsgs.begin(), feetMsgs.end(), [&](std::vector<geometry_msgs::Point>& v) { v.reserve(mpcStateTrajectory.size()); });
+
+  // Reserve Com Msg
+  std::vector<geometry_msgs::Point> mpcComPositionMsgs;
+  mpcComPositionMsgs.reserve(mpcStateTrajectory.size());
+
+  // Extract Com and Feet from state
+  std::for_each(mpcStateTrajectory.begin(), mpcStateTrajectory.end(), [&](const vector_t& state) {
+    const auto basePose = centroidal_model::getBasePose(state, centroidalModelInfo_);
+
+    // Fill com position and pose msgs
+    geometry_msgs::Pose pose;
+    pose.position = getPointMsg(basePose.head<3>());
+    mpcComPositionMsgs.push_back(pose.position);
+
+    // Fill feet msgs
+    const auto& model = pinocchioInterface_.getModel();
+    auto& data = pinocchioInterface_.getData();
+    pinocchio::forwardKinematics(model, data, centroidal_model::getGeneralizedCoordinates(state, centroidalModelInfo_));
+    pinocchio::updateFramePlacements(model, data);
+    const auto feetPositions = endEffectorKinematicsPtr_->getPosition(state);
+    for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+      const auto position = getPointMsg(feetPositions[i]);
+      feetMsgs[i].push_back(position);
+    }
+  });
+
+  // Convert feet msgs to Array message
+  visualization_msgs::MarkerArray markerArray;
+  markerArray.markers.reserve(centroidalModelInfo_.numSixDofContacts +
+                              2);  // 1 trajectory per foot + 1 for the future footholds + 1 for the com trajectory
+  for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+    markerArray.markers.emplace_back(getLineMsg(std::move(feetMsgs[i]), feetColorMap_[i], trajectoryLineWidth_));
+    markerArray.markers.back().ns = "EE Trajectories";
+  }
+  markerArray.markers.emplace_back(getLineMsg(std::move(mpcComPositionMsgs), Color::red, trajectoryLineWidth_));
+  markerArray.markers.back().ns = "CoM Trajectory";
+
+  // Future footholds
+  visualization_msgs::Marker sphereList;
+  sphereList.type = visualization_msgs::Marker::SPHERE_LIST;
+  sphereList.scale.x = footMarkerDiameter_;
+  sphereList.scale.y = footMarkerDiameter_;
+  sphereList.scale.z = footMarkerDiameter_;
+  sphereList.ns = "Future footholds";
+  sphereList.pose.orientation = getOrientationMsg({1., 0., 0., 0.});
+  const auto& eventTimes = modeSchedule.eventTimes;
+  const auto& subsystemSequence = modeSchedule.modeSequence;
+  const auto tStart = mpcTimeTrajectory.front();
+  const auto tEnd = mpcTimeTrajectory.back();
+  for (size_t event = 0; event < eventTimes.size(); ++event) {
+    if (tStart < eventTimes[event] && eventTimes[event] < tEnd) {  // Only publish future footholds within the optimized horizon
+      const auto preEventContactFlags = modeNumber2StanceLeg(subsystemSequence[event]);
+      const auto postEventContactFlags = modeNumber2StanceLeg(subsystemSequence[event + 1]);
+      const auto postEventState = LinearInterpolation::interpolate(eventTimes[event], mpcTimeTrajectory, mpcStateTrajectory);
+
+      const auto& model = pinocchioInterface_.getModel();
+      auto& data = pinocchioInterface_.getData();
+      pinocchio::forwardKinematics(model, data, centroidal_model::getGeneralizedCoordinates(postEventState, centroidalModelInfo_));
+      pinocchio::updateFramePlacements(model, data);
+
+      const auto feetPosition = endEffectorKinematicsPtr_->getPosition(postEventState);
+      for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+        if (!preEventContactFlags[i] && postEventContactFlags[i]) {  // If a foot lands, a marker is added at that location.
+          sphereList.points.emplace_back(getPointMsg(feetPosition[i]));
+          sphereList.colors.push_back(getColor(feetColorMap_[i]));
+        }
+      }
+    }
+  }
+  markerArray.markers.push_back(std::move(sphereList));
+#endif
 
   // Add headers and Id
   assignHeader(markerArray.markers.begin(), markerArray.markers.end(), getHeaderMsg(frameId_, timeStamp));

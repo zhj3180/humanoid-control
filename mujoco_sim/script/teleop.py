@@ -5,11 +5,16 @@ from geometry_msgs.msg import Twist
 from pynput import keyboard
 import threading
 
+from geometry_msgs.msg import Vector3
+
 class KeyboardController:
     def __init__(self):
         self.publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.twist_msg = Twist()
         self.rate = rospy.Rate(150)  # 设置循环的频率为150Hz
+        
+        self.publish_force = rospy.Publisher('/disturb_force', Vector3, queue_size=1)
+        self.force_msg = Vector3()
 
     def on_press(self, key):
         try:
@@ -19,7 +24,7 @@ class KeyboardController:
             else:
                 # 根据按键设置线性速度和角速度
                 if key.char == 'w':
-                    self.twist_msg.linear.x = 0.26
+                    self.twist_msg.linear.x = 0.4
                 elif key.char == 's':
                     self.twist_msg.linear.x = -0.26
                 else:
@@ -38,6 +43,19 @@ class KeyboardController:
                     self.twist_msg.angular.z = -0.32
                 else:
                     self.twist_msg.angular.z = 0.0
+                    
+                if key.char == 'k':
+                    self.force_msg.x=100
+                    self.force_msg.y=0
+                    self.force_msg.z=0
+                elif key.char=='l':
+                    self.force_msg.x=-100
+                    self.force_msg.y=0
+                    self.force_msg.z=0  
+                else:
+                    self.force_msg.x=0
+                    self.force_msg.y=0
+                    self.force_msg.z=0                   
         except AttributeError:
             pass
 
@@ -46,10 +64,15 @@ class KeyboardController:
         self.twist_msg.linear.x = 0.0
         self.twist_msg.linear.y = 0.0
         self.twist_msg.angular.z = 0.0
+        
+        self.force_msg.x=0
+        self.force_msg.y=0
+        self.force_msg.z=0           
 
 def ros_publish():
     while not rospy.is_shutdown():
         controller.publisher.publish(controller.twist_msg)
+        controller.publish_force.publish(controller.force_msg)
         controller.rate.sleep()
 
 

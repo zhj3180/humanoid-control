@@ -9,6 +9,8 @@ from std_msgs.msg import Float32MultiArray,Bool
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 
+from geometry_msgs.msg import Vector3
+
 
 class HumanoidSim(MuJoCoBase):
   def __init__(self, xml_path):
@@ -22,10 +24,16 @@ class HumanoidSim(MuJoCoBase):
     # mj.set_mjcb_control(self.controller)
     # * Set subscriber and publisher
 
+
+    ##############################机身全部质量，通过humanoidcontrol里的订阅函数发布，由pinocchio计算得到 64.38415
+
     # initialize target joint position, velocity, and torque
     self.targetPos = np.array([0.05, -0.05, 0.35, -0.90, -0.55, 0, -0.05, 0.05, 0.35, -0.90, -0.55, 0])
     self.targetVel = np.zeros(12)
-    self.targetTorque = np.zeros(12)
+    
+    #self.targetTorque = np.zeros(12)
+    self.targetTorque = np.zeros(13)    
+    
     self.targetKp = np.ones(12) * 30
     self.targetKd = np.ones(12) * 2
 
@@ -33,6 +41,9 @@ class HumanoidSim(MuJoCoBase):
     self.pubOdom = rospy.Publisher('/ground_truth/state', Odometry, queue_size=10)
     self.pubImu = rospy.Publisher('/imu', Imu, queue_size=10)
     self.pubRealTorque = rospy.Publisher('/realTorque', Float32MultiArray, queue_size=10)
+    
+    self.disturbForce = Vector3()
+    rospy.Subscriber("/disturb_force", Vector3, self.disturbForceCallback)
 
     rospy.Subscriber("/targetTorque", Float32MultiArray, self.targetTorqueCallback) 
     rospy.Subscriber("/targetPos", Float32MultiArray, self.targetPosCallback) 
@@ -74,6 +85,11 @@ class HumanoidSim(MuJoCoBase):
 
   def targetKdCallback(self, data):
     self.targetKd = data.data
+    
+  def disturbForceCallback(self, data):
+    self.disturbForce = data
+    # if self.disturbForce.x or self.disturbForce.y or self.disturbForce.z:
+    #   rospy.loginfo("PYTHON:::disturbForce: x=%f, y=%f, z=%f", self.disturbForce.x, self.disturbForce.y,self.disturbForce.z)
 
   def reset(self):
     # Set camera configuration
@@ -95,7 +111,22 @@ class HumanoidSim(MuJoCoBase):
       while (self.data.time - simstart <= 1.0/60.0 and not self.pause_flag):
 
         # MIT control
-        self.data.ctrl[:] = self.targetTorque + self.targetKp * (self.targetPos - self.data.qpos[-12:]) + self.targetKd * (self.targetVel - self.data.qvel[-12:])
+        
+        #self.data.ctrl[:] = self.targetTorque + self.targetKp * (self.targetPos - self.data.qpos[-12:]) + self.targetKd * (self.targetVel - self.data.qvel[-12:])
+        
+        self.data.ctrl[0:12] = self.targetTorque + self.targetKp * (self.targetPos - self.data.qpos[-12:]) + self.targetKd * (self.targetVel - self.data.qvel[-12:])
+        self.data.ctrl[12] = max(self.disturbForce.x,0)
+        self.data.ctrl[13] = min(self.disturbForce.x,0)
+
+
+#没用             
+#         num_bod = self.model.nbody
+# # 使用 mjlib.mj_name2id 来获取 "base_link" 刚体的 ID
+#         # body_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_BODY, "base_link")
+#         body_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_BODY, "leg_r6_link")
+#         self.data.cdof[body_id] = np.array([self.disturbForce.x, self.disturbForce.y, self.disturbForce.z,0,0,0]) 
+        
+        #rospy.loginfo("PYTHON:::disturbForce: x=%f, y=%f, z=%f", self.disturbForce.x, self.disturbForce.y,self.disturbForce.z)
         # Step simulation environment
         mj.mj_step(self.model, self.data)
         if (self.data.time - publish_time >= 1.0 / 500.0):
@@ -147,6 +178,8 @@ class HumanoidSim(MuJoCoBase):
           bodyImu.angular_velocity_covariance = [0.0, 0, 0, 0, 0.0, 0, 0, 0, 0.0]
           bodyImu.linear_acceleration_covariance = [0.0, 0, 0, 0, 0.0, 0, 0, 0, 0.0]
           self.pubImu.publish(bodyImu)
+          
+          #print("acc:::",bodyImu.linear_acceleration.x,bodyImu.linear_acceleration.y,bodyImu.linear_acceleration.z)
 
           publish_time = self.data.time
 

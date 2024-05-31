@@ -219,15 +219,16 @@ R
   (0,0)   8.0       ; l
   (1,1)   8.0       ; l
   (2,2)   5.0       ; l
-  (3,3)   8.0       ; l
-  (4,4)   8.0       ; l
-  (5,5)   5.0       ; l
+  (3,3)   8.0       ; r
+  (4,4)   8.0       ; r
+  (5,5)   5.0       ; r
   (6,6)   8.0       ; r
   (7,7)   8.0       ; r
   (8,8)   5.0       ; r
   (9,9)   8.0       ; r
   (10,10) 8.0       ; r
   (11,11) 5.0       ; r
+
 
   ;; foot velocity relative to base: [LF, LH, RF, RH] (uses the Jacobian at nominal configuration) ;;
   (12,12) 2000.0    ; x
@@ -242,6 +243,7 @@ R
   (21,21) 2000.0    ; x
   (22,22) 6000.0    ; y
   (23,23) 2000.0    ; z
+
 }
 
 frictionConeSoftConstraint
@@ -280,7 +282,7 @@ torqueLimitsTask
    (2,0)  300.0     ; motor 3
    (3,0)  300.0     ; motor 4
    (4,0)  180.0     ; motor 5
-   (5,0)  90.0     ; motor 6
+   (5,0)  150.0     ; motor 6
 }
 
 frictionConeTask

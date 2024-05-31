@@ -62,6 +62,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
+#define threedof 1
+
 namespace ocs2 {
 namespace humanoid {
 
@@ -120,38 +122,55 @@ void HumanoidInterface::setupOptimalControlProblem(const std::string& taskFile, 
   // PinocchioInterface
   pinocchioInterfacePtr_.reset(new PinocchioInterface(centroidal_model::createPinocchioInterface(urdfFile, modelSettings_.jointNames)));
 
+  //*****************************************************************************************************************************************
   // CentroidalModelInfo
+  // 创建中心模型info，info结构在cnetroidModelInfo.h中,获取模型的info.centroidalInertiaNominal，info.comToBasePositionNominal
+  //中心惯性矩阵，指的是机器人惯性张量，3x3，J，转动惯量（角动量）=惯性张亮*角速度
+  //质心到基座位置变换向量 3*1，xyz
   centroidalModelInfo_ = centroidal_model::createCentroidalModelInfo(
       *pinocchioInterfacePtr_, centroidal_model::loadCentroidalType(taskFile),
       centroidal_model::loadDefaultJointState(pinocchioInterfacePtr_->getModel().nq - 6, referenceFile), modelSettings_.contactNames3DoF,
-      modelSettings_.contactNames6DoF);
+      modelSettings_.contactNames6DoF); //type:Single Rigid Body Dynamics
   // Swing trajectory planner
+  //摆腿轨迹设定，只有z方向的位置与速度，也就是高度，三次曲线组合，通过设定中间高度组合
   auto swingTrajectoryPlanner =
       std::make_unique<SwingTrajectoryPlanner>(loadSwingTrajectorySettings(taskFile, "swing_trajectory_config", verbose), 4);
 
+  //*****************************************************************************************************************************************
   // Mode schedule manager
+  //步态规划  /humanoid_interface/gait/motionPhaseDefinition.h ，在里面将两只脚的四个接触点规划，顺边
   referenceManagerPtr_ =
       std::make_shared<SwitchedModelReferenceManager>(loadGaitSchedule(referenceFile, verbose), std::move(swingTrajectoryPlanner));
 
   // Optimal control problem
+  //初始化优化问题
   problemPtr_.reset(new OptimalControlProblem);
 
+  //*****************************************************************************************************************************************
   // Dynamics
-  bool useAnalyticalGradientsDynamics = false;
+  bool useAnalyticalGradientsDynamics = false;    //梯度优化，相较于数值逼近，对导数求解更精确，没有使用
   loadData::loadCppDataType(taskFile, "humanoid_interface.useAnalyticalGradientsDynamics", useAnalyticalGradientsDynamics);
   std::unique_ptr<SystemDynamicsBase> dynamicsPtr;
   if (useAnalyticalGradientsDynamics) {
     throw std::runtime_error("[HumanoidInterface::setupOptimalControlProblem] The analytical dynamics class is not yet implemented!");
   } else {
     const std::string modelName = "dynamics";
+    //加载Pinocchio模型结构，中心模型相关参数
+    //动力学方程指针dynamicsPtr的构造函数使用的是pinocchioCentroidalDynamicsAd_，在ocs2_centroidal_model/PinocchioCentroidalDynamicsAD.h中
+    //使用CppAD自动生成动力学计算函数，x_dot=f(x,u);  函数放在task.info指定的文件夹中 /tmp/ocs2 通过中心模型参数，直接生成函数文件
+    //函数内部计算无法明确获取，只能获取结果
+    //该指针主要功能是调用，数据流图计算函数，得到结果
     dynamicsPtr.reset(new HumanoidDynamicsAD(*pinocchioInterfacePtr_, centroidalModelInfo_, modelName, modelSettings_));
   }
 
   problemPtr_->dynamicsPtr = std::move(dynamicsPtr);
 
+  //*****************************************************************************************************************************************
   // Cost terms
+  //读取task.info设定参数，得到Q矩阵 24*24， 计算雅可比矩阵， 得到R矩阵 24*24，l_force,l_torque,r_force,r_torque,v_(1~12)
   problemPtr_->costPtr->add("baseTrackingCost", getBaseTrackingCost(taskFile, centroidalModelInfo_, false));
 
+  //*****************************************************************************************************************************************
   // Constraint terms
   // friction cone settings
   scalar_t frictionCoefficient = 0.7;
@@ -160,9 +179,15 @@ void HumanoidInterface::setupOptimalControlProblem(const std::string& taskFile, 
 
   bool useAnalyticalGradientsConstraints = false;
   loadData::loadCppDataType(taskFile, "humanoid_interface.useAnalyticalGradientsConstraints", useAnalyticalGradientsConstraints);
+#if threedof
   for (size_t i = 0; i < centroidalModelInfo_.numThreeDofContacts; i++) {
     const std::string& footName = modelSettings_.contactNames3DoF[i];
-
+#else
+  for (size_t i = 0; i < centroidalModelInfo_.numSixDofContacts; i++) {
+    const std::string& footName = modelSettings_.contactNames6DoF[i];
+#endif
+  //创建末端执行器运动学指针，在ocs2_robot_tools里 EndEfffectorKinematics.h
+  //计算末端执行器速度，位置
     std::unique_ptr<EndEffectorKinematics<scalar_t>> eeKinematicsPtr;
     if (useAnalyticalGradientsConstraints) {
       throw std::runtime_error(
@@ -173,7 +198,36 @@ void HumanoidInterface::setupOptimalControlProblem(const std::string& taskFile, 
       auto velocityUpdateCallback = [&infoCppAd](const ad_vector_t& state, PinocchioInterfaceCppAd& pinocchioInterfaceAd) {
         const ad_vector_t q = centroidal_model::getGeneralizedCoordinates(state, infoCppAd);
         updateCentroidalDynamics(pinocchioInterfaceAd, infoCppAd, q);
+
+
+  // std::ofstream outFile_state("state.txt", std::ios::trunc);
+  // if (!outFile_state.is_open()) {
+  //   std::cerr << "无法打开文件0" << std::endl;
+  // }
+  // else{
+  //   outFile_state<<time<<std::endl;
+  //   for(int i=0;i<state.size();i++)
+  //     outFile_state<<state[i]<<" ";
+  //   outFile_state<<std::endl;
+  // }
+  // outFile_state.close();
+
+  //   std::ofstream outFile_q("q.txt", std::ios::trunc);
+  // if (!outFile_q.is_open()) {
+  //   std::cerr << "无法打开文件0" << std::endl;
+  // }
+  // else{
+  //   outFile_q<<time<<std::endl;
+  //   for(int i=0;i<q.size();i++)
+  //     outFile_q<<q[i]<<" ";
+  //   outFile_q<<std::endl;
+  // }
+  // outFile_q.close();
+
       };
+
+
+    
       eeKinematicsPtr.reset(new PinocchioEndEffectorKinematicsCppAd(*pinocchioInterfacePtr_, pinocchioMappingCppAd, {footName},
                                                                     centroidalModelInfo_.stateDim, centroidalModelInfo_.inputDim,
                                                                     velocityUpdateCallback, footName, modelSettings_.modelFolderCppAd,
@@ -203,6 +257,8 @@ void HumanoidInterface::setupOptimalControlProblem(const std::string& taskFile, 
   // Pre-computation
   problemPtr_->preComputationPtr.reset(new HumanoidPreComputation(*pinocchioInterfacePtr_, centroidalModelInfo_,
                                                                      *referenceManagerPtr_->getSwingTrajectoryPlanner(), modelSettings_));
+
+                                                                       std::cout<<std::endl;
 
   // Rollout
   rolloutPtr_.reset(new TimeTriggeredRollout(*problemPtr_->dynamicsPtr, rolloutSettings_));
@@ -246,6 +302,8 @@ std::shared_ptr<GaitSchedule> HumanoidInterface::loadGaitSchedule(const std::str
 /******************************************************************************************************/
 /******************************************************************************************************/
 matrix_t HumanoidInterface::initializeInputCostWeight(const std::string& taskFile, const CentroidalModelInfo& info) {
+  matrix_t R = matrix_t::Zero(info.inputDim, info.inputDim);
+#if threedof
     const size_t totalContactDim = 3 * info.numThreeDofContacts;
 
     vector_t initialState(centroidalModelInfo_.stateDim);
@@ -267,15 +325,81 @@ matrix_t HumanoidInterface::initializeInputCostWeight(const std::string& taskFil
                 jacobianWorldToContactPointInWorldFrame.block(0, 6, 3, info.actuatedDofNum);
     }
 
+    std::cout<<std::endl;
+    std::cout<<"info.actuatedDofNum:::::"<<info.actuatedDofNum<<std::endl;
+    std::cout<<std::endl;
+
+    std::cout<<std::endl;
+    std::cout<<"totalContactDim:::::"<<totalContactDim<<std::endl;
+    std::cout<<std::endl;
+    
     matrix_t R_taskspace(totalContactDim + totalContactDim, totalContactDim + totalContactDim);
     loadData::loadEigenMatrix(taskFile, "R", R_taskspace);
 
-    matrix_t R = matrix_t::Zero(info.inputDim, info.inputDim);
     // Contact Forces
     R.topLeftCorner(totalContactDim, totalContactDim) = R_taskspace.topLeftCorner(totalContactDim, totalContactDim);
     // Joint velocities
     R.bottomRightCorner(info.actuatedDofNum, info.actuatedDofNum) =
             baseToFeetJacobians.transpose() * R_taskspace.bottomRightCorner(totalContactDim, totalContactDim) * baseToFeetJacobians;
+  std::ofstream outFile_jacobian("jacobian.txt", std::ios::trunc);
+  if (!outFile_jacobian.is_open()) {
+    std::cerr << "无法打开文件0" << std::endl;
+  }
+  else{
+    outFile_jacobian<<time<<std::endl;
+    outFile_jacobian<<R<<std::endl;
+    outFile_jacobian<<std::endl;
+  }
+  outFile_jacobian.close();
+#else
+    const size_t totalContactDim = 6 * info.numSixDofContacts;
+
+    vector_t initialState(centroidalModelInfo_.stateDim);
+    loadData::loadEigenMatrix(taskFile, "initialState", initialState);
+
+    const auto& model = pinocchioInterfacePtr_->getModel();
+    auto& data = pinocchioInterfacePtr_->getData();
+    const auto q = centroidal_model::getGeneralizedCoordinates(initialState, centroidalModelInfo_);
+    pinocchio::computeJointJacobians(model, data, q);
+    pinocchio::updateFramePlacements(model, data);
+
+    matrix_t baseToFeetJacobians(totalContactDim, info.actuatedDofNum);
+    for (size_t i = 0; i < info.numSixDofContacts; i++) {
+        matrix_t jacobianWorldToContactPointInWorldFrame = matrix_t::Zero(6, info.generalizedCoordinatesNum);
+        pinocchio::getFrameJacobian(model, data, model.getBodyId(modelSettings_.contactNames6DoF[i]), pinocchio::LOCAL_WORLD_ALIGNED,
+                                    jacobianWorldToContactPointInWorldFrame);
+
+        baseToFeetJacobians.block(6 * i, 0, 6, info.actuatedDofNum) =
+                jacobianWorldToContactPointInWorldFrame.block(0, 6, 6, info.actuatedDofNum);
+    }
+    // std::cout<<std::endl;
+    // std::cout<<"info.actuatedDofNum:::::"<<info.actuatedDofNum<<std::endl;
+    // std::cout<<std::endl;
+
+    // std::cout<<std::endl;
+    // std::cout<<"totalContactDim:::::"<<totalContactDim<<std::endl;
+    // std::cout<<std::endl;
+    
+    matrix_t R_taskspace(totalContactDim + totalContactDim, totalContactDim + totalContactDim);
+    loadData::loadEigenMatrix(taskFile, "R", R_taskspace);
+
+    // Contact Forces
+    R.topLeftCorner(totalContactDim, totalContactDim) = R_taskspace.topLeftCorner(totalContactDim, totalContactDim);
+    // Joint velocities
+    R.bottomRightCorner(info.actuatedDofNum, info.actuatedDofNum) =
+            baseToFeetJacobians.transpose() * R_taskspace.bottomRightCorner(totalContactDim, totalContactDim) * baseToFeetJacobians;
+  std::ofstream outFile_jacobian_6("jacobian_6.txt", std::ios::trunc);
+  if (!outFile_jacobian_6.is_open()) {
+    std::cerr << "无法打开文件0" << std::endl;
+  }
+  else{
+    outFile_jacobian_6<<time<<std::endl;
+    outFile_jacobian_6<<R<<std::endl;
+    outFile_jacobian_6<<std::endl;
+  }
+  outFile_jacobian_6.close();
+#endif
+
     return R;
 }
 

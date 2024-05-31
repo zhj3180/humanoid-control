@@ -115,6 +115,8 @@
         <motor gear="1" joint="leg_r4_joint" name="leg_r4_motor" ctrllimited="true"  ctrlrange='-200 200'/>
         <motor gear="1" joint="leg_r5_joint" name="leg_r5_motor" ctrllimited="true"  ctrlrange='-90 90'/>
         <motor gear="1" joint="leg_r6_joint" name="leg_r6_motor" ctrllimited="true"  ctrlrange='-90 90'/>
+        <motor gear="1" joint="leg_l1_joint" name="leg_l1_motor2" ctrllimited="true"  ctrlrange='-50 50'/>
+        <motor gear="1" joint="leg_r1_joint" name="leg_r1_motor2" ctrllimited="true"  ctrlrange='-50 50'/>
     </actuator>
     <sensor>
         <jointpos name="leg_l1_pos" joint="leg_l1_joint"/>
