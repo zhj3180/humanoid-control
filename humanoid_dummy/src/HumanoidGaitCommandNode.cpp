@@ -38,6 +38,8 @@ using namespace humanoid;
 int main(int argc, char* argv[]) {
   const std::string robotName = "humanoid";
 
+  ROS_INFO("COMMAND:::::::");
+
   // Initialize ros node
   ros::init(argc, argv, robotName + "_mpc_mode_schedule");
   ros::NodeHandle nodeHandle;

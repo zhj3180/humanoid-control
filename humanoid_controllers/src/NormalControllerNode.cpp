@@ -21,9 +21,11 @@ int main(int argc, char** argv){
     ros::init(argc, argv, "humanoid_controller_node");
     ros::NodeHandle nh;
     humanoid_controller::HybridJointInterface* robot_hw;
+
     //create a subscriber to pauseFlag
     ros::Subscriber pause_sub = nh.subscribe<std_msgs::Bool>("pauseFlag", 1, pauseCallback);
     humanoid_controller::humanoidController controller;
+
     if (!controller.init(robot_hw, nh)) {
         ROS_ERROR("Failed to initialize the humanoid controller!");
         return -1;
@@ -34,11 +36,13 @@ int main(int argc, char** argv){
     controller.starting(startTimeROS);
     auto lastTime = startTime;
 
+
     //create a thread to spin the node
     std::thread spin_thread([](){
+
         ros::spin();
     });
-    spin_thread.detach();
+    spin_thread.detach();//线程分离，因为ros::spin会阻塞，所以创建新线程，独立运行
 
     while(ros::ok()){
         if (!pause_flag)
@@ -67,6 +71,7 @@ int main(int argc, char** argv){
             // Sleep
             const auto sleepTill = currentTime + std::chrono::duration_cast<Clock::duration>(desiredDuration);
             std::this_thread::sleep_until(sleepTill);
+
         }
     }
 

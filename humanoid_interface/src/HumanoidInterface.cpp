@@ -96,6 +96,7 @@ HumanoidInterface::HumanoidInterface(const std::string& taskFile, const std::str
   }
 
   bool verbose;
+
   loadData::loadCppDataType(taskFile, "humanoid_interface.verbose", verbose);
 
   // load setting from loading file
@@ -127,12 +128,16 @@ void HumanoidInterface::setupOptimalControlProblem(const std::string& taskFile, 
   // 创建中心模型info，info结构在cnetroidModelInfo.h中,获取模型的info.centroidalInertiaNominal，info.comToBasePositionNominal
   //中心惯性矩阵，指的是机器人惯性张量，3x3，J，转动惯量（角动量）=惯性张亮*角速度
   //质心到基座位置变换向量 3*1，xyz
+
+  //这里有问题
   centroidalModelInfo_ = centroidal_model::createCentroidalModelInfo(
       *pinocchioInterfacePtr_, centroidal_model::loadCentroidalType(taskFile),
       centroidal_model::loadDefaultJointState(pinocchioInterfacePtr_->getModel().nq - 6, referenceFile), modelSettings_.contactNames3DoF,
       modelSettings_.contactNames6DoF); //type:Single Rigid Body Dynamics
   // Swing trajectory planner
   //摆腿轨迹设定，只有z方向的位置与速度，也就是高度，三次曲线组合，通过设定中间高度组合
+
+
   auto swingTrajectoryPlanner =
       std::make_unique<SwingTrajectoryPlanner>(loadSwingTrajectorySettings(taskFile, "swing_trajectory_config", verbose), 4);
 
@@ -141,6 +146,11 @@ void HumanoidInterface::setupOptimalControlProblem(const std::string& taskFile, 
   //步态规划  /humanoid_interface/gait/motionPhaseDefinition.h ，在里面将两只脚的四个接触点规划，顺边
   referenceManagerPtr_ =
       std::make_shared<SwitchedModelReferenceManager>(loadGaitSchedule(referenceFile, verbose), std::move(swingTrajectoryPlanner));
+
+
+
+
+
 
   // Optimal control problem
   //初始化优化问题

@@ -1,0 +1,112 @@
+<mujoco model="adam_lite">
+    <compiler angle="radian" />
+    <size njmax="500" nconmax="100" />
+    <worldbody>
+        <geom size="0.1 0.1" quat="0.707388 0.706825 0 0" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+        <body name="hipPitchLeft" pos="0 0.096102 -0.027011" quat="0.953716 -0.300708 0 0">
+            <inertial pos="-0.06071 0.058995 -0.000274" quat="0.2259 0.413092 0.574187 0.669801" mass="2.12296" diaginertia="0.00480692 0.00469646 0.00272763" />
+            <joint name="hipPitch_Left" pos="0 0 0" axis="0 1 0" limited="true" range="-2.09 2.09" />
+            <body name="hipRollLeft" pos="-0.0255 0.069 0" quat="0.953716 0.300708 0 0">
+                <inertial pos="0.039593 -0.000453 -0.010045" quat="-0.0502458 0.589823 -0.00127584 0.805967" mass="1.3024" diaginertia="0.00136322 0.00119316 0.00109763" />
+                <joint name="hipRoll_Left" pos="0 0 0" axis="1 0 0" limited="true" range="-0.78 1.57" />
+                <body name="thigh_Left" pos="0.044 0 -0.0525">
+                    <inertial pos="0.003802 -0.00818 -0.130931" quat="0.685627 0.0478779 -0.0360642 0.725481" mass="6.09891" diaginertia="0.0578471 0.0518378 0.0115542" />
+                    <joint name="hipYaw_Left" pos="0 0 0" axis="0 0 1" limited="true" range="-0.78 0.78" />
+                    <body name="shin_Left" pos="0 -0.0355 -0.369">
+                        <inertial pos="4e-06 0.000631 -0.145751" quat="0.638683 0.00462673 -0.0130091 0.769346" mass="2.24063" diaginertia="0.0235607 0.0234803 0.00132806" />
+                        <joint name="kneePitch_Left" pos="0 0 0" axis="0 1 0" limited="true" range="-0.09 2.4" />
+                        <geom size="0.04 0.03 0.15" pos="0 0 -0.2" type="box" rgba="0.752941 0.752941 0.752941 1" />
+                        <body name="footLeftY" pos="0 0 -0.37">
+                            <inertial pos="0 0 0" mass="0.052131" diaginertia="5e-06 5e-06 4e-06" />
+                            <joint name="anklePitch_Left" pos="0 0 0" axis="0 1 0" limited="true" range="-1 0.35" />
+                            <body name="toe_left" pos="0 0 0">
+                                <inertial pos="0.052656 0.117093 -0.900329" quat="3.80354e-05 0.66776 -0.00707653 0.744343" mass="0.436113" diaginertia="0.0015569 0.00151313 0.000281965" />
+                                <joint name="ankleRoll_Left" pos="0 0 0" axis="1 0 0" limited="true" range="-0.3491 0.3491" />
+                                <geom size="0.12 0.05 0.015" pos="0.047 0 -0.05" type="box" rgba="0.752941 0.752941 0.752941 1" />
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+        <body name="hipPitchRight" pos="0 -0.096102 -0.027011" quat="0.953716 0.300708 0 0">
+            <inertial pos="-0.06071 -0.058995 -0.000274" quat="0.669801 0.574187 0.413092 0.2259" mass="2.12296" diaginertia="0.00480692 0.00469646 0.00272763" />
+            <joint name="hipPitch_Right" pos="0 0 0" axis="0 1 0" limited="true" range="-2.09 2.09" />
+            <body name="hipRollRight" pos="-0.0255 -0.069 0" quat="0.953716 -0.300708 0 0">
+                <inertial pos="0.039593 0.000453 -0.010045" quat="0.0502458 0.589823 0.00127584 0.805967" mass="1.3024" diaginertia="0.00136322 0.00119316 0.00109763" />
+                <joint name="hipRoll_Right" pos="0 0 0" axis="1 0 0" limited="true" range="-1.57 0.78" />
+                <body name="thigh_Right" pos="0.044 0 -0.0525">
+                    <inertial pos="0.003802 0.00818 -0.130931" quat="0.725481 -0.0360642 0.0478779 0.685627" mass="6.09891" diaginertia="0.0578471 0.0518378 0.0115542" />
+                    <joint name="hipYaw_Right" pos="0 0 0" axis="0 0 1" limited="true" range="-0.78 0.78" />
+                    <body name="shin_Right" pos="0 0.0355 -0.369">
+                        <inertial pos="4e-06 -0.000631 -0.145751" quat="0.769346 -0.0130091 0.00462673 0.638683" mass="2.24063" diaginertia="0.0235607 0.0234803 0.00132806" />
+                        <joint name="kneePitch_Right" pos="0 0 0" axis="0 1 0" limited="true" range="-0.09 2.4" />
+                        <geom size="0.04 0.03 0.15" pos="0 0 -0.2" type="box" rgba="0.752941 0.752941 0.752941 1" />
+                        <body name="footRightY" pos="0 0 -0.37">
+                            <inertial pos="0 0 0" mass="0.052131" diaginertia="5e-06 5e-06 4e-06" />
+                            <joint name="anklePitch_Right" pos="0 0 0" axis="0 1 0" limited="true" range="-1 0.35" />
+                            <body name="toe_right" pos="0 0 0">
+                                <inertial pos="0.052656 -0.117093 -0.900329" quat="-3.80354e-05 0.66776 0.00707653 0.744343" mass="0.436113" diaginertia="0.0015569 0.00151313 0.000281965" />
+                                <joint name="ankleRoll_Right" pos="0 0 0" axis="1 0 0" limited="true" range="-0.3491 0.3491" />
+                                <geom size="0.12 0.05 0.015" pos="0.047 0 -0.05" type="box" rgba="0.752941 0.752941 0.752941 1" />
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+        <body name="waistRoll" pos="0 0 0.05023">
+            <inertial pos="0.001521 0.001495 0.039984" quat="0.426082 0.0231673 -0.00875426 0.904345" mass="2.5" diaginertia="0.00676976 0.0067468 0.00246545" />
+            <joint name="waistRoll" pos="0 0 0" axis="1 0 0" limited="true" range="-0.52 0.52" />
+            <body name="waistPitch" pos="0 0 0.08">
+                <inertial pos="0 -0.003646 0.029114" quat="0.521775 0.477233 -0.477233 0.521775" mass="0.654478" diaginertia="0.00121048 0.00117 0.000770515" />
+                <joint name="waistPitch" pos="0 0 0" axis="0 1 0" limited="true" range="-0.78 0.78" />
+                <body name="torso" pos="0 0 0.056115">
+                    <inertial pos="0.00999897 -1.76399e-05 0.200507" quat="0.999216 0.00019187 -0.0395987 -3.12304e-05" mass="11.864" diaginertia="0.220659 0.186499 0.0835417" />
+                    <joint name="waistYaw" pos="0 0 0" axis="0 0 1" limited="true" range="-0.78 0.78" />
+                    <geom size="0.13" pos="0 0 0.15" rgba="0.439216 0.439216 0.439216 1" />
+                    <body name="shoulderPitchLeft" pos="0 0.158234 0.253619" quat="0.984807 0.17365 0 0">
+                        <inertial pos="-0.00147856 0.0312405 0.000194587" quat="-0.00224487 0.705241 0.0161677 0.708779" mass="0.222453" diaginertia="0.000380025 0.000328084 0.000174891" />
+                        <joint name="shoulderPitch_Left" pos="0 0 0" axis="0 1 0" limited="true" range="-2.7 1" />
+                        <body name="shoulderRollLeft" pos="0.0335 0.044 0" quat="0.984807 -0.17365 0 0">
+                            <inertial pos="-0.030453 0.010582 -0.014137" quat="0.395304 -0.143325 0.291372 0.859241" mass="0.6" diaginertia="0.000764117 0.000738326 0.000336557" />
+                            <joint name="shoulderRoll_Left" pos="0 0 0" axis="1 0 0" limited="true" range="-0.3 3.14" />
+                            <geom size="0.035 0.05" pos="-0.03 0 0" quat="0.707105 0 0.707108 0" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                            <body name="shoulderYawLeft" pos="-0.0335 0.034081 -0.059">
+                                <inertial pos="-0.000951634 -0.00063648 -0.0979643" quat="0.999931 0.00767396 -0.00893722 0.000336496" mass="0.853574" diaginertia="0.00470232 0.00453394 0.000559741" />
+                                <joint name="shoulderYaw_Left" pos="0 0 0" axis="0 0 1" limited="true" range="-1.6 1.6" />
+                                <geom size="0.038 0.075" pos="0 0 -0.08" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                                <body name="elbowLeft" pos="0 -0.0285 -0.20365">
+                                    <inertial pos="-0.00754242 0.0277403 -0.0779356" quat="0.703856 0.0140127 0.00981989 0.710137" mass="0.876361" diaginertia="0.0109277 0.0108858 0.000382195" />
+                                    <joint name="elbow_Left" pos="0 0 0" axis="0 1 0" limited="true" range="-2 0" />
+                                    <geom size="0.035 0.04" pos="0 0.03 0" quat="0.707105 0.707108 0 0" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                                    <geom size="0.035 0.14" pos="-0.015 0.0285 -0.1934" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                    <body name="shoulderPitchRight" pos="0 -0.158234 0.253619" quat="0.984807 -0.17365 0 0">
+                        <inertial pos="-0.00147856 -0.0312405 0.000194587" quat="0.00224487 0.705241 -0.0161677 0.708779" mass="0.222453" diaginertia="0.000380025 0.000328084 0.000174891" />
+                        <joint name="shoulderPitch_Right" pos="0 0 0" axis="0 1 0" limited="true" range="-2.7 1.1" />
+                        <body name="shoulderRollRight" pos="0.0335 -0.044 0" quat="0.984807 0.17365 0 0">
+                            <inertial pos="-0.030453 -0.010582 -0.014137" quat="0.859241 0.291372 -0.143325 0.395304" mass="0.6" diaginertia="0.000764117 0.000738326 0.000336557" />
+                            <joint name="shoulderRoll_Right" pos="0 0 0" axis="1 0 0" limited="true" range="-3.14 0.3" />
+                            <geom size="0.035 0.05" pos="-0.03 0 0" quat="0.707105 0 0.707108 0" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                            <body name="shoulderYawRight" pos="-0.0335 -0.034081 -0.059">
+                                <inertial pos="-0.000951634 0.00063648 -0.0979643" quat="0.999931 -0.00767396 -0.00893722 -0.000336496" mass="0.853574" diaginertia="0.00470232 0.00453394 0.000559741" />
+                                <joint name="shoulderYaw_Right" pos="0 0 0" axis="0 0 1" limited="true" range="-1.6 1.6" />
+                                <geom size="0.038 0.075" pos="0 0 -0.08" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                                <body name="elbowRight" pos="0 0.0285 -0.20365">
+                                    <inertial pos="-0.00754242 -0.0277403 -0.0779356" quat="0.710137 0.00981989 0.0140127 0.703856" mass="0.876361" diaginertia="0.0109277 0.0108858 0.000382195" />
+                                    <joint name="elbow_Right" pos="0 0 0" axis="0 1 0" limited="true" range="-2 0" />
+                                    <geom size="0.035 0.04" pos="0 -0.03 0" quat="0.707105 0.707108 0 0" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                                    <geom size="0.035 0.14" pos="-0.015 -0.0285 -0.1934" type="cylinder" rgba="0.752941 0.752941 0.752941 1" />
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

@@ -189,10 +189,14 @@ void HumanoidVisualizer::publishObservation(ros::Time timeStamp, const SystemObs
 /******************************************************************************************************/
 void HumanoidVisualizer::publishJointTransforms(ros::Time timeStamp, const vector_t& jointAngles) const {
   if (robotStatePublisherPtr_ != nullptr) {
-    std::map<std::string, scalar_t> jointPositions{{"leg_l1_joint", jointAngles[0]}, {"leg_l2_joint", jointAngles[1]},  {"leg_l3_joint", jointAngles[2]},
-                                                   {"leg_l4_joint", jointAngles[3]}, {"leg_l5_joint", jointAngles[4]},  {"leg_l6_joint", jointAngles[5]},
-                                                    {"leg_r1_joint", jointAngles[6]}, {"leg_r2_joint", jointAngles[7]},  {"leg_r3_joint", jointAngles[8]},
-                                                    {"leg_r4_joint", jointAngles[9]}, {"leg_r5_joint", jointAngles[10]}, {"leg_r6_joint", jointAngles[11]}};
+    std::map<std::string, scalar_t> jointPositions{{"hipPitch_Left", jointAngles[0]}, {"hipRoll_Left", jointAngles[1]},  {"hipYaw_Left", jointAngles[2]},
+                                                   {"kneePitch_Left", jointAngles[3]}, {"anklePitch_Left", jointAngles[4]},  {"ankleRoll_Left", jointAngles[5]},
+                                                    {"hipPitch_Right", jointAngles[6]}, {"hipRoll_Right", jointAngles[7]},  {"hipYaw_Right", jointAngles[8]},
+                                                    {"kneePitch_Right", jointAngles[9]}, {"anklePitch_Right", jointAngles[10]}, {"ankleRoll_Right", jointAngles[11]}};
+    // std::map<std::string, scalar_t> jointPositions{{"leg_l1_joint", jointAngles[0]}, {"leg_l2_joint", jointAngles[1]},  {"leg_l3_joint", jointAngles[2]},
+    //                                                {"leg_l4_joint", jointAngles[3]}, {"leg_l5_joint", jointAngles[4]},  {"leg_l6_joint", jointAngles[5]},
+    //                                                 {"leg_r1_joint", jointAngles[6]}, {"leg_r2_joint", jointAngles[7]},  {"leg_r3_joint", jointAngles[8]},
+    //                                                 {"leg_r4_joint", jointAngles[9]}, {"leg_r5_joint", jointAngles[10]}, {"leg_r6_joint", jointAngles[11]}};
     robotStatePublisherPtr_->publishTransforms(jointPositions, timeStamp);
   }
 }

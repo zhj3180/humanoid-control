@@ -34,7 +34,7 @@ class HumanoidSim(MuJoCoBase):
     self.targetVel = np.zeros(12)
     
     #self.targetTorque = np.zeros(12)
-    self.targetTorque = np.zeros(13)    
+    self.targetTorque = np.zeros(14)    
     
     self.targetKp = np.ones(12) * 30
     self.targetKd = np.ones(12) * 2
@@ -120,6 +120,14 @@ class HumanoidSim(MuJoCoBase):
         self.data.ctrl[0:12] = self.targetTorque + self.targetKp * (self.targetPos - self.data.qpos[-12:]) + self.targetKd * (self.targetVel - self.data.qvel[-12:])
         self.data.ctrl[12] = max(self.disturbForce.x,0)
         self.data.ctrl[13] = min(self.disturbForce.x,0)
+        filename = "ctrl_data_stand.txt"
+        # 打开文件准备写入，模式为'append'
+        with open(filename, "a") as file:
+            # 取self.data.ctrl的前12个元素并转换成字符串列表
+            # 然后使用join方法将它们连成一行，以空格分隔
+            line = ' '.join(map(str, self.data.ctrl[0:12])) + '\n'
+            # 将这个字符串写入文件
+            file.write(line)
 
 
 #没用             

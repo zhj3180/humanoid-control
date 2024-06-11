@@ -55,9 +55,10 @@ bool humanoidController::init(HybridJointInterface* robot_hw, ros::NodeHandle& c
   // Hardware interface
   //TODO: setup hardware controller interface
   //create a ROS subscriber to receive the joint pos and vel
+  //修改
     jointPos_ = vector_t::Zero(jointNum_);
     //set jointPos_ to {0, 0, 0.35, -0.90, -0.55, 0, 0, 0, 0.35, -0.90, -0.55, 0}
-    jointPos_ << 0.05, -0.05, 0.35, -0.90, -0.55, 0, -0.05, 0.05, 0.35, -0.90, -0.55, 0;
+    // jointPos_ << 0.05, -0.05, 0.35, -0.90, -0.55, 0, -0.05, 0.05, 0.35, -0.90, -0.55, 0;
     jointVel_ = vector_t::Zero(jointNum_);
     quat_ = Eigen::Quaternion<scalar_t>(1, 0, 0, 0);
   jointPosVelSub_ =  controllerNh_.subscribe<std_msgs::Float32MultiArray>("/jointsPosVel", 10, &humanoidController::jointStateCallback, this);
@@ -127,7 +128,9 @@ void humanoidController::starting(const ros::Time& time) {
   // Initial state
   //set the initial state = {0, 0, 0, 0, 0, 0, 0, 0, 0.976, 0, 0, 0, 0, 0, 0.35, -0.90, -0.55, 0, 0, 0, 0.35, -0.90, -0.55, 0}
   currentObservation_.state = vector_t::Zero(HumanoidInterface_->getCentroidalModelInfo().stateDim);
-  currentObservation_.state(8) = 0.976;
+  //修改
+  // currentObservation_.state(8) = 0.976;
+  currentObservation_.state(8) = 0.925;
   currentObservation_.state.segment(6 + 6, jointNum_) = defalutJointPos_;
 
   updateStateEstimation(time, ros::Duration(0.002));
@@ -164,8 +167,7 @@ void humanoidController::update(const ros::Time& time, const ros::Duration& peri
   vector_t optimizedState, optimizedInput;
   mpcMrtInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState, optimizedInput, plannedMode_);
 
-  // std::cout<<time<<std::endl;
-  // std::cout<<optimizedInput.size()<<std::endl;
+  // std::cout<<"jointNum::"<<jointNum_<<std::endl;
   // std::cout<<std::endl;
 
   // Whole body control
@@ -225,9 +227,12 @@ void humanoidController::update(const ros::Time& time, const ros::Duration& peri
     targetTorquePub_.publish(targetTorqueMsg);
     targetPosPub_.publish(targetPosMsg);
     targetVelPub_.publish(targetVelMsg);
-    std_msgs::Float32MultiArray targetKp;
+    std_msgs::Float32MultiArray targetKp; 
     std_msgs::Float32MultiArray targetKd;
     if(currentObservation_.mode == ModeNumber::STANCE){
+      //修改
+      // targetKp.data = {350.0, 350.0, 300.0, 400.0, 400.0, 1.0, 350.0, 350.0, 300.0, 400.0, 400.0, 1.0};
+      // targetKd.data = {10.0, 10.0, 10.0, 10.0, 0.5, 0.1, 10.0, 10.0, 10.0, 10.0, 0.5, 0.1};
       targetKp.data = {350.0, 350.0, 300.0, 400.0, 400.0, 1.0, 350.0, 350.0, 300.0, 400.0, 400.0, 1.0};
       targetKd.data = {10.0, 10.0, 10.0, 10.0, 0.5, 0.1, 10.0, 10.0, 10.0, 10.0, 0.5, 0.1};
     }

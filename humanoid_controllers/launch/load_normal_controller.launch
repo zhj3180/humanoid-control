@@ -13,9 +13,9 @@
     <!-- The reference related config file of the robot -->
     <arg name="referenceFile"     default="$(find humanoid_interface)/config/command/reference.info"/>
     <!-- The URDF model of the robot -->
-    <arg name="urdfFile"          default="$(find humanoid_legged_description)/urdf/humanoid_legged_control.urdf"/>
+    <arg name="urdfFile"          default="/home/zhanghj/software/human_ws/src/humanoid-control/adam_lite/urdf/adam_lite_copy.urdf"/>
     <!-- <arg name="urdfFile"          default="$(find humanoid_legged_description)/mjcf/humanoid_legged.urdf"/> -->
-    <arg name="urdfFileOrigin"    default="$(find humanoid_legged_description)/urdf/humanoid_legged_origin.urdf"/>
+    <arg name="urdfFileOrigin"    default="/home/zhanghj/software/human_ws/src/humanoid-control/adam_lite/urdf/adam_lite_copy.urdf"/>
 
     <arg name="urdfFileTest"    default="$(find humanoid_legged_description)/urdf/humanoid_legged_test.urdf"/>
     <!-- The file defining gait definition -->
@@ -43,7 +43,9 @@
           output="screen"/>
     <node pkg="humanoid_controllers" type="normal_controller_node" name="normal_controller"
           output="screen"/>
-    <node pkg="mujoco_sim" type="humanoid_sim.py" name="humanoid_sim"
+    <!-- <node pkg="mujoco_sim" type="humanoid_sim.py" name="humanoid_sim"
+          output="screen"/> -->
+    <node pkg="mujoco_sim" type="pnd_sim.py" name="humanoid_sim"
           output="screen"/>
     <node pkg="mujoco_sim" type="teleop.py" name="teleop"
           output="screen" launch-prefix="gnome-terminal --"/>
